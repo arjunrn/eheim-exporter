@@ -26,6 +26,6 @@ jobs:
     - name: Cache
       uses: actions/cache@v2.1.6
       with:
-        path:
-        - bin/eheim-expoter
+        path: |
+          bin/eheim-expoter
     
