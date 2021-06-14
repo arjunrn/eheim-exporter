@@ -1,0 +1,31 @@
+name: Go
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.15
+
+    - name: Build
+      run: go build -v -o bin/eheim-expoter main.go
+
+    - name: Test
+      run: go test -v ./...
+    - name: Cache
+      uses: actions/cache@v2.1.6
+      with:
+        path:
+        - bin/eheim-expoter
+    
