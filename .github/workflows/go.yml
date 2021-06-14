@@ -23,9 +23,3 @@ jobs:
 
     - name: Test
       run: go test -v ./...
-    - name: Cache
-      uses: actions/cache@v2.1.6
-      with:
-        path: |
-          bin/eheim-expoter
-    
