@@ -11,17 +11,21 @@ type Sender struct {
 	conn     *websocket.Conn
 	interval *time.Ticker
 	quit     chan struct{}
-	message  *GetFilterData
+	messages []GetFilterData
 }
 
-func NewWSSender(conn *websocket.Conn, interval time.Duration) *Sender {
+func NewWSSender(conn *websocket.Conn, interval time.Duration, filters ...string) *Sender {
 	quit := make(chan struct{})
-	return &Sender{
+	sender := &Sender{
 		conn:     conn,
 		interval: time.NewTicker(interval),
 		quit:     quit,
-		message: NewGetFilterDataMessage("FC:F5:C4:93:C5:0A"),
 	}
+	sender.messages = make([]GetFilterData, len(filters))
+	for i, f := range filters {
+		sender.messages[i] = NewGetFilterDataMessage(f)
+	}
+	return sender
 }
 
 func (s *Sender) Stop() {
@@ -29,14 +33,15 @@ func (s *Sender) Stop() {
 }
 
 func (s *Sender) Run() {
-
 	for {
 		select {
 		case <-s.interval.C:
 			log.Debugf("Sending GET_FILTER_DATA message")
-			err := s.conn.WriteJSON(s.message)
-			if err != nil {
-				log.Warnf("failed to send GET_FILTER_DATA message: %v", err)
+			for _, m := range s.messages {
+				err := s.conn.WriteJSON(m)
+				if err != nil {
+					log.Warnf("failed to send GET_FILTER_DATA message: %v", err)
+				}
 			}
 		case <-s.quit:
 			s.interval.Stop()

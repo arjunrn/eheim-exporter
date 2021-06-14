@@ -2,18 +2,24 @@ package app
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
-	"github.com/arjunrn/eheim-exporter/pkg/ws"
 	"github.com/gorilla/websocket"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/arjunrn/eheim-exporter/pkg/ws"
 )
 
-func App(ctx context.Context, websocketUrl string) {
+func App(ctx context.Context, websocketURL string, metricsPort int) {
 	log.SetLevel(log.DebugLevel)
-	conn, _, err := websocket.DefaultDialer.DialContext(ctx, websocketUrl, nil)
+	conn, _, err := websocket.DefaultDialer.DialContext(ctx, websocketURL, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -34,17 +40,32 @@ func App(ctx context.Context, websocketUrl string) {
 	log.Infof("%#v", *accessPoint)
 	log.Infof("%#v", *filterData)
 
-	terminate := make(chan os.Signal)
-	signal.Notify(terminate, os.Kill, os.Interrupt)
+	terminate := make(chan os.Signal, 2)
+	signal.Notify(terminate, syscall.SIGTERM, os.Interrupt)
 
-	sender := ws.NewWSSender(conn, time.Second*10)
+	sender := ws.NewWSSender(conn, time.Second*10, userData.From)
 	receiver := ws.NewReceiver(conn)
 
 	go sender.Run()
 	go receiver.Run()
 
+	promRegistry := prometheus.NewRegistry()
+	server := http.Server{
+		Addr:    fmt.Sprintf(":%d", metricsPort),
+		Handler: promhttp.HandlerFor(promRegistry, promhttp.HandlerOpts{}),
+	}
+	go func() {
+		err := server.ListenAndServe()
+		if err != nil {
+			log.Errorf("failed to start metrics server: %v", err)
+		}
+	}()
 	receivedSignal := <-terminate
 	log.Infof("Received Signal %s. Terminating...", receivedSignal)
 	sender.Stop()
 	receiver.Stop()
+	err = server.Shutdown(context.TODO())
+	if err != nil {
+		log.Warnf("failed to shutdown metrics server: %v", err)
+	}
 }

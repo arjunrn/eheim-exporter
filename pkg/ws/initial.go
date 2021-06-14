@@ -12,19 +12,23 @@ type initialMessageParser struct {
 	conn *websocket.Conn
 }
 
-func NewInitialMessageParser(conn *websocket.Conn) *initialMessageParser {
+type InitialMessageParser interface {
+	Parse() (*UserData, *NetworkDevice, *AccessPoint, *FilterData, error)
+}
+
+func NewInitialMessageParser(conn *websocket.Conn) InitialMessageParser {
 	return &initialMessageParser{conn: conn}
 }
 
-func (p *initialMessageParser) Parse() (*UserData, *NetworkStatus, *AccessPoint, *FilterData, error) {
+func (p *initialMessageParser) Parse() (*UserData, *NetworkDevice, *AccessPoint, *FilterData, error) {
 	var messages []map[string]interface{}
 	err := p.conn.ReadJSON(&messages)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to read first messages on websocket: %v", err)
+		return nil, nil, nil, nil, fmt.Errorf("failed to read first messages on websocket: %w", err)
 	}
 	var (
 		userData   UserData
-		netSt      NetworkStatus
+		netSt      NetworkDevice
 		netAp      AccessPoint
 		filterData FilterData
 	)
@@ -59,7 +63,7 @@ func (p *initialMessageParser) Parse() (*UserData, *NetworkStatus, *AccessPoint,
 
 	err = p.conn.ReadJSON(&messages)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to read second messages on websocket: %v", err)
+		return nil, nil, nil, nil, fmt.Errorf("failed to read second messages on websocket: %w", err)
 	}
 	for _, m := range messages {
 		if title, ok := m["title"]; !ok {
@@ -85,11 +89,11 @@ func (p *initialMessageParser) Parse() (*UserData, *NetworkStatus, *AccessPoint,
 func reserialize(message map[string]interface{}, target interface{}) error {
 	payload, err := json.Marshal(message)
 	if err != nil {
-		return fmt.Errorf("failed to marshall message %#v: %v", message, err)
+		return fmt.Errorf("failed to marshall message %#v: %w", message, err)
 	}
 	err = json.Unmarshal(payload, target)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshall marshalled data %s: %v", payload, err)
+		return fmt.Errorf("failed to unmarshall marshalled data %s: %w", payload, err)
 	}
 	return nil
 }

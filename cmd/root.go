@@ -5,19 +5,20 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/arjunrn/eheim-exporter/pkg/app"
-	"github.com/spf13/cobra"
-
 	"github.com/mitchellh/go-homedir"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/arjunrn/eheim-exporter/pkg/app"
 )
 
 var (
 	cfgFile      string
-	websocketUrl string
+	websocketURL string
+	metricsPort  uint
 )
 
-// rootCmd represents the base command when called without any subcommands
+// rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "eheim-exporter",
 	Short: "A brief description of your application",
@@ -28,7 +29,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		app.App(context.TODO(), websocketUrl)
+		app.App(context.TODO(), websocketURL, int(metricsPort))
 	},
 }
 
@@ -46,7 +47,8 @@ func init() {
 	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.eheim-exporter.yaml)")
-	rootCmd.PersistentFlags().StringVar(&websocketUrl, "websocket-url", "ws://eheimdigital/ws", "The websocket URL of the filter")
+	rootCmd.PersistentFlags().StringVar(&websocketURL, "websocket-url", "ws://eheimdigital/ws", "The websocket URL of the filter")
+	rootCmd.PersistentFlags().UintVar(&metricsPort, "metrics-port", 8081, "The port of the metrics server")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
