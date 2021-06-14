@@ -1,23 +1,29 @@
 package ws
 
 import (
+	"github.com/arjunrn/eheim-exporter/pkg/data"
+	"github.com/arjunrn/eheim-exporter/pkg/metrics"
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
 )
 
 type Receiver struct {
-	conn *websocket.Conn
-	quit bool
+	conn          *websocket.Conn
+	quit          bool
+	filterMetrics metrics.FilterMetrics
 }
 
-func NewReceiver(conn *websocket.Conn) *Receiver {
-	return &Receiver{conn: conn}
+func NewReceiver(conn *websocket.Conn, filterMetrics metrics.FilterMetrics) *Receiver {
+	return &Receiver{
+		conn:          conn,
+		filterMetrics: filterMetrics,
+	}
 }
 
 func (r *Receiver) Run() {
 	var (
 		message    map[string]interface{}
-		filterData FilterData
+		filterData data.FilterData
 	)
 	for {
 		err := r.conn.ReadJSON(&message)
@@ -40,7 +46,11 @@ func (r *Receiver) Run() {
 				log.Warnf("failed to get filter data from message: %v", err)
 				continue
 			}
-			log.Debugf("received filter data: %#v", filterData)
+			r.filterMetrics.RotationSpeed(filterData.From, filterData.RotationSpeed)
+			r.filterMetrics.DFS(filterData.From, filterData.DFS)
+			r.filterMetrics.DFSFactor(filterData.From, filterData.DFSFactor)
+			r.filterMetrics.Frequency(filterData.From, filterData.Frequency)
+			r.filterMetrics.PumpMode(filterData.From, filterData.PumpMode)
 		case "REQ_KEEP_ALIVE":
 			// keep alive message. do nothing
 		default:

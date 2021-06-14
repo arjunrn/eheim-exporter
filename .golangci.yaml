@@ -93,7 +93,6 @@ linters:
       - gofmt
       - goheader
       - goimports
-      - golint
       - gomoddirectives
       - gomodguard
       - gosec

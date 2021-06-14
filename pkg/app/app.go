@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/arjunrn/eheim-exporter/pkg/metrics"
 	"github.com/gorilla/websocket"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -43,16 +44,19 @@ func App(ctx context.Context, websocketURL string, metricsPort int) {
 	terminate := make(chan os.Signal, 2)
 	signal.Notify(terminate, syscall.SIGTERM, os.Interrupt)
 
+	promRegistry := prometheus.NewRegistry()
+	filterMetrics := metrics.NewFilterMetrics(promRegistry)
+
 	sender := ws.NewWSSender(conn, time.Second*10, userData.From)
-	receiver := ws.NewReceiver(conn)
+	receiver := ws.NewReceiver(conn, filterMetrics)
 
 	go sender.Run()
 	go receiver.Run()
 
-	promRegistry := prometheus.NewRegistry()
-	server := http.Server{
-		Addr:    fmt.Sprintf(":%d", metricsPort),
-		Handler: promhttp.HandlerFor(promRegistry, promhttp.HandlerOpts{}),
+	promHandler := promhttp.HandlerFor(promRegistry, promhttp.HandlerOpts{})
+	server := &http.Server{
+		Addr:    fmt.Sprintf("0.0.0.0:%d", metricsPort),
+		Handler: promHandler,
 	}
 	go func() {
 		err := server.ListenAndServe()
@@ -64,8 +68,4 @@ func App(ctx context.Context, websocketURL string, metricsPort int) {
 	log.Infof("Received Signal %s. Terminating...", receivedSignal)
 	sender.Stop()
 	receiver.Stop()
-	err = server.Shutdown(context.TODO())
-	if err != nil {
-		log.Warnf("failed to shutdown metrics server: %v", err)
-	}
 }

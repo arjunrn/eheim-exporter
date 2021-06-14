@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/arjunrn/eheim-exporter/pkg/data"
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
 )
@@ -13,24 +14,24 @@ type initialMessageParser struct {
 }
 
 type InitialMessageParser interface {
-	Parse() (*UserData, *NetworkDevice, *AccessPoint, *FilterData, error)
+	Parse() (*data.UserData, *data.NetworkDevice, *data.AccessPoint, *data.FilterData, error)
 }
 
 func NewInitialMessageParser(conn *websocket.Conn) InitialMessageParser {
 	return &initialMessageParser{conn: conn}
 }
 
-func (p *initialMessageParser) Parse() (*UserData, *NetworkDevice, *AccessPoint, *FilterData, error) {
+func (p *initialMessageParser) Parse() (*data.UserData, *data.NetworkDevice, *data.AccessPoint, *data.FilterData, error) {
 	var messages []map[string]interface{}
 	err := p.conn.ReadJSON(&messages)
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("failed to read first messages on websocket: %w", err)
 	}
 	var (
-		userData   UserData
-		netSt      NetworkDevice
-		netAp      AccessPoint
-		filterData FilterData
+		userData   data.UserData
+		netSt      data.NetworkDevice
+		netAp      data.AccessPoint
+		filterData data.FilterData
 	)
 	for _, m := range messages {
 		if title, ok := m["title"]; !ok {

@@ -3,6 +3,7 @@ package ws
 import (
 	"time"
 
+	"github.com/arjunrn/eheim-exporter/pkg/data"
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
 )
@@ -11,7 +12,7 @@ type Sender struct {
 	conn     *websocket.Conn
 	interval *time.Ticker
 	quit     chan struct{}
-	messages []GetFilterData
+	messages []data.GetFilterData
 }
 
 func NewWSSender(conn *websocket.Conn, interval time.Duration, filters ...string) *Sender {
@@ -21,9 +22,9 @@ func NewWSSender(conn *websocket.Conn, interval time.Duration, filters ...string
 		interval: time.NewTicker(interval),
 		quit:     quit,
 	}
-	sender.messages = make([]GetFilterData, len(filters))
+	sender.messages = make([]data.GetFilterData, len(filters))
 	for i, f := range filters {
-		sender.messages[i] = NewGetFilterDataMessage(f)
+		sender.messages[i] = data.NewGetFilterDataMessage(f)
 	}
 	return sender
 }
