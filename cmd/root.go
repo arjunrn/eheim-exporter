@@ -16,6 +16,7 @@ var (
 	cfgFile      string
 	websocketURL string
 	metricsPort  uint
+	debug        bool
 )
 
 // rootCmd represents the base command when called without any subcommands.
@@ -29,7 +30,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		app.App(context.TODO(), websocketURL, int(metricsPort))
+		app.App(context.TODO(), websocketURL, int(metricsPort), debug)
 	},
 }
 
@@ -49,6 +50,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.eheim-exporter.yaml)")
 	rootCmd.PersistentFlags().StringVar(&websocketURL, "websocket-url", "ws://eheimdigital/ws", "The websocket URL of the filter")
 	rootCmd.PersistentFlags().UintVar(&metricsPort, "metrics-port", 8081, "The port of the metrics server")
+	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logging")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.

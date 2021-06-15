@@ -18,8 +18,12 @@ import (
 	"github.com/arjunrn/eheim-exporter/pkg/ws"
 )
 
-func App(ctx context.Context, websocketURL string, metricsPort int) {
-	log.SetLevel(log.DebugLevel)
+func App(ctx context.Context, websocketURL string, metricsPort int, debug bool) {
+	if debug {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
 	conn, _, err := websocket.DefaultDialer.DialContext(ctx, websocketURL, nil)
 	if err != nil {
 		panic(err)
