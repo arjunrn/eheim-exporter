@@ -18,7 +18,7 @@ import (
 	"github.com/arjunrn/eheim-exporter/pkg/ws"
 )
 
-func App(ctx context.Context, websocketURL string, metricsPort int, debug bool) {
+func App(ctx context.Context, websocketURL string, metricsPort int, refreshInterval time.Duration, debug bool) {
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	} else {
@@ -51,7 +51,7 @@ func App(ctx context.Context, websocketURL string, metricsPort int, debug bool) 
 	promRegistry := prometheus.NewRegistry()
 	filterMetrics := metrics.NewFilterMetrics(promRegistry)
 
-	sender := ws.NewWSSender(conn, time.Second*10, userData.From)
+	sender := ws.NewWSSender(conn, refreshInterval, userData.From)
 	receiver := ws.NewReceiver(conn, filterMetrics)
 
 	go sender.Run()

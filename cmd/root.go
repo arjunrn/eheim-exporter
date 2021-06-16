@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -13,10 +14,11 @@ import (
 )
 
 var (
-	cfgFile      string
-	websocketURL string
-	metricsPort  uint
-	debug        bool
+	cfgFile         string
+	websocketURL    string
+	metricsPort     uint
+	debug           bool
+	refreshInterval time.Duration
 )
 
 // rootCmd represents the base command when called without any subcommands.
@@ -30,7 +32,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		app.App(context.TODO(), websocketURL, int(metricsPort), debug)
+		app.App(context.TODO(), websocketURL, int(metricsPort), refreshInterval, debug)
 	},
 }
 
@@ -51,10 +53,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&websocketURL, "websocket-url", "ws://eheimdigital/ws", "The websocket URL of the filter")
 	rootCmd.PersistentFlags().UintVar(&metricsPort, "metrics-port", 8081, "The port of the metrics server")
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logging")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().DurationVarP(&refreshInterval, "refresh-interval", "r", 60*time.Second, "The interval between fetches from the filter")
 }
 
 // initConfig reads in config file and ENV variables if set.
