@@ -110,6 +110,8 @@ func (r *Receiver) parseMessage(message map[string]interface{}) {
 		// ignore
 	case "GET_FILTER_DATA":
 		// ignore
+	case "GET_MESH_NETWORK":
+		// ignore
 	default:
 		log.Warnf("unknown title %s in message: %#v", title, message)
 	}

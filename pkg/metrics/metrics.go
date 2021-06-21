@@ -22,6 +22,7 @@ type filterMetrics struct {
 	frequency          *prometheus.GaugeVec
 	pumpMode           *prometheus.GaugeVec
 	networkClient      *prometheus.GaugeVec
+	accessPoint        *prometheus.GaugeVec
 }
 
 func (m *filterMetrics) UserData(userData data.UserData) {
@@ -29,7 +30,11 @@ func (m *filterMetrics) UserData(userData data.UserData) {
 }
 
 func (m *filterMetrics) NetworkClient(st data.NetworkDevice) {
-	m.networkClient.WithLabelValues(st.From, st.SSID, ip(st.IP), ip(st.Gateway))
+	var power int
+	if st.StPower != "" {
+		power = 1
+	}
+	m.networkClient.WithLabelValues(st.From, st.SSID, ip(st.IP), ip(st.Gateway)).Set(float64(power))
 }
 
 func ip(input []int) string {
@@ -41,7 +46,11 @@ func ip(input []int) string {
 }
 
 func (m *filterMetrics) NetworkAccessPoint(ap data.AccessPoint) {
-	panic("implement me")
+	var power int
+	if ap.Power != "" {
+		power = 1
+	}
+	m.accessPoint.WithLabelValues(ap.From, ap.SSID).Set(float64(power))
 }
 
 func NewFilterMetrics(registry *prometheus.Registry) FilterMetrics {
@@ -51,6 +60,11 @@ func NewFilterMetrics(registry *prometheus.Registry) FilterMetrics {
 		Name: "network_client", Help: "Network Client Information"},
 		[]string{"name", "ssid", "ip", "gateway"},
 	)
+	registry.MustRegister(networkClient)
+	accessPoint := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "access_point", Help: "Access Point Information",
+	}, []string{"name", "ssid"})
+	registry.MustRegister(accessPoint)
 	return &filterMetrics{
 		rotationSpeedGauge: newGauge("rotation_speed", "The rotation speed of the filter motor", registry),
 		dfsGauge:           newGauge("dfs", "unknown", registry),
@@ -58,6 +72,7 @@ func NewFilterMetrics(registry *prometheus.Registry) FilterMetrics {
 		frequency:          newGauge("frequency", "motor frequency", registry),
 		pumpMode:           g,
 		networkClient:      networkClient,
+		accessPoint:        accessPoint,
 	}
 }
 
