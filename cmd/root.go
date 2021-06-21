@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"time"
@@ -32,7 +31,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		app.App(context.TODO(), websocketURL, int(metricsPort), refreshInterval, debug)
+		app.App(websocketURL, int(metricsPort), refreshInterval, debug)
 	},
 }
 
@@ -50,7 +49,7 @@ func init() {
 	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.eheim-exporter.yaml)")
-	rootCmd.PersistentFlags().StringVar(&websocketURL, "websocket-url", "ws://eheimdigital/ws", "The websocket URL of the filter")
+	rootCmd.PersistentFlags().StringVar(&websocketURL, "url", "ws://eheimdigital/ws", "The wswrapper URL of the filter")
 	rootCmd.PersistentFlags().UintVar(&metricsPort, "metrics-port", 8081, "The port of the metrics server")
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logging")
 	rootCmd.PersistentFlags().DurationVarP(&refreshInterval, "refresh-interval", "r", 60*time.Second, "The interval between fetches from the filter")

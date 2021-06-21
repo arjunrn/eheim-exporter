@@ -1,16 +1,18 @@
 package metrics
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/arjunrn/eheim-exporter/pkg/data"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type FilterMetrics interface {
-	RotationSpeed(string, int)
-	DFS(string, int)
-	DFSFactor(string, int)
-	Frequency(string, int)
-	PumpMode(string, data.PumpMode)
+	FilterData(filterData data.FilterData)
+	UserData(userData data.UserData)
+	NetworkClient(st data.NetworkDevice)
+	NetworkAccessPoint(ap data.AccessPoint)
 }
 
 type filterMetrics struct {
@@ -19,17 +21,43 @@ type filterMetrics struct {
 	dfsGauge           *prometheus.GaugeVec
 	frequency          *prometheus.GaugeVec
 	pumpMode           *prometheus.GaugeVec
+	networkClient      *prometheus.GaugeVec
+}
+
+func (m *filterMetrics) UserData(userData data.UserData) {
+
+}
+
+func (m *filterMetrics) NetworkClient(st data.NetworkDevice) {
+	m.networkClient.WithLabelValues(st.From, st.SSID, ip(st.IP), ip(st.Gateway))
+}
+
+func ip(input []int) string {
+	parts := make([]string, len(input))
+	for i, p := range input {
+		parts[i] = strconv.Itoa(p)
+	}
+	return strings.Join(parts, ".")
+}
+
+func (m *filterMetrics) NetworkAccessPoint(ap data.AccessPoint) {
+	panic("implement me")
 }
 
 func NewFilterMetrics(registry *prometheus.Registry) FilterMetrics {
 	g := prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "pump_mode", Help: "The pump mode"}, []string{"name", "mode"})
 	registry.MustRegister(g)
+	networkClient := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "network_client", Help: "Network Client Information"},
+		[]string{"name", "ssid", "ip", "gateway"},
+	)
 	return &filterMetrics{
 		rotationSpeedGauge: newGauge("rotation_speed", "The rotation speed of the filter motor", registry),
 		dfsGauge:           newGauge("dfs", "unknown", registry),
 		dfsFactorGauge:     newGauge("dfs_factor", "unknown factor", registry),
 		frequency:          newGauge("frequency", "motor frequency", registry),
 		pumpMode:           g,
+		networkClient:      networkClient,
 	}
 }
 
@@ -42,25 +70,14 @@ func newGauge(name string, help string, registry *prometheus.Registry) *promethe
 	return gauge
 }
 
-func (m *filterMetrics) DFS(name string, dfs int) {
-	m.dfsGauge.WithLabelValues(name).Set(float64(dfs))
-}
-
-func (m *filterMetrics) DFSFactor(name string, dfsFactor int) {
-	m.dfsFactorGauge.WithLabelValues(name).Set(float64(dfsFactor))
-}
-
-func (m *filterMetrics) RotationSpeed(name string, speed int) {
-	m.rotationSpeedGauge.WithLabelValues(name).Set(float64(speed))
-}
-
-func (m *filterMetrics) Frequency(name string, frequency int) {
-	m.frequency.WithLabelValues(name).Set(float64(frequency))
-}
-
-func (m *filterMetrics) PumpMode(name string, mode data.PumpMode) {
+func (m *filterMetrics) FilterData(input data.FilterData) {
+	name := input.From
+	m.dfsGauge.WithLabelValues(name).Set(float64(input.DFS))
+	m.dfsFactorGauge.WithLabelValues(name).Set(float64(input.DFSFactor))
+	m.rotationSpeedGauge.WithLabelValues(name).Set(float64(input.RotationSpeed))
+	m.frequency.WithLabelValues(name).Set(float64(input.Frequency))
 	pumpModeVal := "unknown"
-	switch mode {
+	switch input.PumpMode {
 	case data.ConstantFlowMode:
 		pumpModeVal = "constant_flow"
 	case data.BioMode:

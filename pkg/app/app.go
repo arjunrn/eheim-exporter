@@ -6,70 +6,83 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/arjunrn/eheim-exporter/pkg/metrics"
-	"github.com/gorilla/websocket"
+	"github.com/arjunrn/eheim-exporter/pkg/processor"
+	"github.com/arjunrn/eheim-exporter/pkg/wswrapper"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/arjunrn/eheim-exporter/pkg/ws"
 )
 
-func App(ctx context.Context, websocketURL string, metricsPort int, refreshInterval time.Duration, debug bool) {
+func App(websocketURL string, metricsPort int, refreshInterval time.Duration, debug bool) {
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	} else {
 		log.SetLevel(log.InfoLevel)
 	}
-	conn, _, err := websocket.DefaultDialer.DialContext(ctx, websocketURL, nil)
-	if err != nil {
-		panic(err)
-	}
-	defer func(conn *websocket.Conn) {
-		err := conn.Close()
-		if err != nil {
-			log.Errorf("failed to close connection correctly: %v", err)
-		}
-	}(conn)
 
-	parser := ws.NewInitialMessageParser(conn)
-	userData, networkStatus, accessPoint, filterData, err := parser.Parse()
-	if err != nil {
-		return
-	}
-	log.Infof("%#v", *userData)
-	log.Infof("%#v", *networkStatus)
-	log.Infof("%#v", *accessPoint)
-	log.Infof("%#v", *filterData)
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
+	promRegistry := prometheus.NewRegistry()
+	filterMetrics := metrics.NewFilterMetrics(promRegistry)
+	tracker := processor.NewFilterIDTracker()
+	ws := wswrapper.NewReconnectingWebsocket(websocketURL, refreshInterval)
+	receiver := processor.NewReceiver(ws.ReceiverChan(), filterMetrics, tracker)
+	sender := processor.NewSender(ws, refreshInterval, tracker)
 
 	terminate := make(chan os.Signal, 2)
 	signal.Notify(terminate, syscall.SIGTERM, os.Interrupt)
 
-	promRegistry := prometheus.NewRegistry()
-	filterMetrics := metrics.NewFilterMetrics(promRegistry)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := ws.Run(ctx)
+		if err != nil {
+			log.Errorf("websocket failed to connect: %v", err)
+		}
+	}()
 
-	sender := ws.NewWSSender(conn, refreshInterval, userData.From)
-	receiver := ws.NewReceiver(conn, filterMetrics)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		sender.Run(ctx)
+	}()
 
-	go sender.Run()
-	go receiver.Run()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := receiver.Run(ctx)
+		if err != nil {
+			log.Errorf("failed to run receiver: %v", err)
+		}
+	}()
 
 	promHandler := promhttp.HandlerFor(promRegistry, promhttp.HandlerOpts{})
 	server := &http.Server{
 		Addr:    fmt.Sprintf("0.0.0.0:%d", metricsPort),
 		Handler: promHandler,
 	}
+
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		err := server.ListenAndServe()
 		if err != nil {
 			log.Errorf("failed to start metrics server: %v", err)
 		}
 	}()
+
 	receivedSignal := <-terminate
 	log.Infof("Received Signal %s. Terminating...", receivedSignal)
-	sender.Stop()
-	receiver.Stop()
+	cancelFunc()
+	if err := server.Shutdown(ctx); err != nil {
+		log.Errorf("failed to shutdown metrics server: %v", err)
+	}
+	wg.Wait()
 }

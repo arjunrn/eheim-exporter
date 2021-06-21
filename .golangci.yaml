@@ -112,7 +112,6 @@ linters:
       - revive
       - staticcheck
       - stylecheck
-      - testpackage
       - thelper
       - unparam
       - unused
