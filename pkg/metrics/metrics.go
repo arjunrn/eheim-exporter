@@ -91,16 +91,5 @@ func (m *filterMetrics) FilterData(input data.FilterData) {
 	m.dfsFactorGauge.WithLabelValues(name).Set(float64(input.DFSFactor))
 	m.rotationSpeedGauge.WithLabelValues(name).Set(float64(input.RotationSpeed))
 	m.frequency.WithLabelValues(name).Set(float64(input.Frequency))
-	pumpModeVal := "unknown"
-	switch input.PumpMode {
-	case data.ConstantFlowMode:
-		pumpModeVal = "constant_flow"
-	case data.BioMode:
-		pumpModeVal = "bio"
-	case data.PulseFlowMode:
-		pumpModeVal = "pulse"
-	case data.ManualMode:
-		pumpModeVal = "manual"
-	}
-	m.pumpMode.WithLabelValues(name, pumpModeVal).Set(1)
+	m.pumpMode.WithLabelValues(name, input.PumpMode.String()).Set(1)
 }

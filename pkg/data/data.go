@@ -1,5 +1,9 @@
 package data
 
+import (
+	"fmt"
+)
+
 type GetFilterData struct {
 	Title string `json:"title"`
 	To    string `json:"to"`
@@ -47,6 +51,21 @@ type AccessPoint struct {
 	To    string `json:"to"`
 }
 type PumpMode int
+
+func (p PumpMode) String() string {
+	switch p {
+	case ConstantFlowMode:
+		return "Constant Flow"
+	case BioMode:
+		return "Bio"
+	case PulseFlowMode:
+		return "Pulse"
+	case ManualMode:
+		return "Manual"
+	default:
+		return fmt.Sprintf("Unknown(%d)", p)
+	}
+}
 
 var (
 	// ConstantFlowMode indicates flow is at a constant rate.
