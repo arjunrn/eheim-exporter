@@ -1,4 +1,4 @@
-FROM golang:1.16-buster
+FROM golang:1.17-buster
 RUN mkdir /app
 COPY go.mod /app
 COPY go.sum /app
