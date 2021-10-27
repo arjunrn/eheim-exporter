@@ -7,3 +7,6 @@ lint:
 
 build:
 	go build -o bin/eheim-exporter main.go
+
+test:
+	go test ./...
