@@ -8,7 +8,7 @@ WORKDIR /
 RUN rm -rf /app
 COPY . /app
 WORKDIR /app
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o bin/eheim-exporter main.go
+RUN CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/eheim-exporter main.go
 
 FROM alpine:latest
 COPY --from=0 /app/bin/eheim-exporter /eheim-exporter
